@@ -33,3 +33,6 @@ test:
 
 vet:
 	docker run --rm -v $(CURDIR):/app:z -w /app golangci/golangci-lint:latest golangci-lint run -v --timeout 15m
+
+docker_build_gha:
+	docker build -t registry-emea.app.corpintra.net/roadrunner/upterm:latest -f Dockerfile-gha.uptermd .

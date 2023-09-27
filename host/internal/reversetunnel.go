@@ -97,6 +97,8 @@ func (c *ReverseTunnel) Establish(ctx context.Context) (*server.CreateSessionRes
 		c.Client, err = ssh.Dial("tcp", c.Host.Host, config)
 	}
 
+	c.Logger.WithError(err).Error("DEBUG mario")
+
 	if err != nil {
 		return nil, sshDialError(c.Host.String(), err)
 	}
@@ -174,7 +176,7 @@ type PermissionDeniedError struct {
 }
 
 func (e *PermissionDeniedError) Error() string {
-	return fmt.Sprintf("%s: Permission denied (publickey).", e.host)
+	return fmt.Sprintf("%s: Permission denied (publickey) - DEBUG.", e.host)
 }
 
 func (e *PermissionDeniedError) Unwrap() error { return e.err }

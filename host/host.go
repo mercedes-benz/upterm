@@ -1,7 +1,6 @@
 package host
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -68,6 +67,11 @@ type hostKeyCallback struct {
 	ssh.HostKeyCallback
 }
 
+type GitHub struct {
+	API   *url.URL
+	Token string
+}
+
 func (cb hostKeyCallback) checkHostKey(hostname string, remote net.Addr, key ssh.PublicKey) error {
 	if err := cb.HostKeyCallback(hostname, remote, key); err != nil {
 		kerr, ok := err.(*knownhosts.KeyError)
@@ -96,30 +100,32 @@ func (cb hostKeyCallback) promptForConfirmation(hostname string, remote net.Addr
 		key = cert.SignatureKey
 	}
 
-	fp := utils.FingerprintSHA256(key)
-	fmt.Fprintf(cb.stdout, "The authenticity of host '%s (%s)' can't be established.\n", knownhosts.Normalize(hostname), knownhosts.Normalize(remote.String()))
-	fmt.Fprintf(cb.stdout, "%s key fingerprint is %s.\n", keyType(key.Type()), fp)
-	fmt.Fprintf(cb.stdout, "Are you sure you want to continue connecting (yes/no/[fingerprint])? ")
+	return cb.appendHostLine(isCert, hostname, remote.String(), key)
 
-	reader := bufio.NewReader(cb.stdin)
-	for {
-		confirm, err := reader.ReadString('\n')
-		if err != nil {
-			return err
-		}
+	// fp := utils.FingerprintSHA256(key)
+	// fmt.Fprintf(cb.stdout, "The authenticity of host '%s (%s)' can't be established.\n", knownhosts.Normalize(hostname), knownhosts.Normalize(remote.String()))
+	// fmt.Fprintf(cb.stdout, "%s key fingerprint is %s.\n", keyType(key.Type()), fp)
+	// fmt.Fprintf(cb.stdout, "Are you sure you want to continue connecting (yes/no/[fingerprint])? ")
 
-		confirm = strings.TrimSpace(confirm)
+	// reader := bufio.NewReader(cb.stdin)
+	// for {
+	// 	confirm, err := reader.ReadString('\n')
+	// 	if err != nil {
+	// 		return err
+	// 	}
 
-		if confirm == "yes" || confirm == fp {
-			return cb.appendHostLine(isCert, hostname, remote.String(), key)
-		}
+	// 	confirm = strings.TrimSpace(confirm)
 
-		if confirm == "no" {
-			return fmt.Errorf("Host key verification failed.")
-		}
+	// 	if confirm == "yes" || confirm == fp {
+	// 		return cb.appendHostLine(isCert, hostname, remote.String(), key)
+	// 	}
 
-		fmt.Fprintf(cb.stdout, "Please type 'yes', 'no' or the fingerprint: ")
-	}
+	// 	if confirm == "no" {
+	// 		return fmt.Errorf("Host key verification failed.")
+	// 	}
+
+	// 	fmt.Fprintf(cb.stdout, "Please type 'yes', 'no' or the fingerprint: ")
+	// }
 }
 
 func (cb hostKeyCallback) appendHostLine(isCert bool, hostname, remote string, key ssh.PublicKey) error {

@@ -2,6 +2,7 @@ package host
 
 import (
 	"bytes"
+	"context"
 	"crypto/x509"
 	"errors"
 	"fmt"
@@ -17,6 +18,8 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/term"
+
+	"github.com/google/go-github/v55/github"
 )
 
 const (
@@ -69,6 +72,30 @@ func getUserPublicKeys(urlFmt string, username string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
+func getPublicKeysFromGitHub(gitHub GitHub, usernames []string) ([]ssh.PublicKey, error) {
+	var authorizedKeys []ssh.PublicKey
+
+	client := github.NewClient(nil).
+		WithAuthToken(gitHub.Token)
+
+	client.BaseURL = gitHub.API
+
+	for _, username := range usernames {
+		keys, _, err := client.Users.ListKeys(context.Background(), username, nil)
+		if err != nil {
+			return nil, err
+		}
+		for _, key := range keys {
+			pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(key.GetKey()))
+			if err != nil {
+				return nil, err
+			}
+			authorizedKeys = append(authorizedKeys, pubKey)
+		}
+	}
+	return authorizedKeys, nil
+}
+
 func getPublicKeys(urlFmt string, usernames []string) ([]ssh.PublicKey, error) {
 	var authorizedKeys []ssh.PublicKey
 	seen := make(map[string]bool)
@@ -89,8 +116,12 @@ func getPublicKeys(urlFmt string, usernames []string) ([]ssh.PublicKey, error) {
 	return authorizedKeys, nil
 }
 
-func GitHubUserKeys(usernames []string) ([]ssh.PublicKey, error) {
-	return getPublicKeys(gitHubKeysUrlFmt, usernames)
+func GitHubUserKeys(gitHub GitHub, usernames []string) ([]ssh.PublicKey, error) {
+	if gitHub.API != nil {
+		return getPublicKeysFromGitHub(gitHub, usernames)
+	} else {
+		return getPublicKeys(gitHubKeysUrlFmt, usernames)
+	}
 }
 
 func GitLabUserKeys(usernames []string) ([]ssh.PublicKey, error) {
