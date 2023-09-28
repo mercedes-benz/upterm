@@ -97,8 +97,6 @@ func (c *ReverseTunnel) Establish(ctx context.Context) (*server.CreateSessionRes
 		c.Client, err = ssh.Dial("tcp", c.Host.Host, config)
 	}
 
-	c.Logger.WithError(err).Error("DEBUG mario")
-
 	if err != nil {
 		return nil, sshDialError(c.Host.String(), err)
 	}

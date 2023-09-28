@@ -15,6 +15,7 @@ import (
 	"syscall"
 
 	"github.com/owenthereal/upterm/utils"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/term"
@@ -72,7 +73,7 @@ func getUserPublicKeys(urlFmt string, username string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-func getPublicKeysFromGitHub(gitHub GitHub, usernames []string) ([]ssh.PublicKey, error) {
+func getPublicKeysFromGitHub(logger *log.Logger, gitHub GitHub, usernames []string) ([]ssh.PublicKey, error) {
 	var authorizedKeys []ssh.PublicKey
 
 	client := github.NewClient(nil).
@@ -85,7 +86,10 @@ func getPublicKeysFromGitHub(gitHub GitHub, usernames []string) ([]ssh.PublicKey
 		if err != nil {
 			return nil, err
 		}
+
+		logger.Info(fmt.Sprintf("Found %d keys for %s", len(keys), username))
 		for _, key := range keys {
+			logger.Info(fmt.Sprintf("User %s - key %s", username, key.GetKey()))
 			pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(key.GetKey()))
 			if err != nil {
 				return nil, err
@@ -116,9 +120,9 @@ func getPublicKeys(urlFmt string, usernames []string) ([]ssh.PublicKey, error) {
 	return authorizedKeys, nil
 }
 
-func GitHubUserKeys(gitHub GitHub, usernames []string) ([]ssh.PublicKey, error) {
+func GitHubUserKeys(logger *log.Logger, gitHub GitHub, usernames []string) ([]ssh.PublicKey, error) {
 	if gitHub.API != nil {
-		return getPublicKeysFromGitHub(gitHub, usernames)
+		return getPublicKeysFromGitHub(logger, gitHub, usernames)
 	} else {
 		return getPublicKeys(gitHubKeysUrlFmt, usernames)
 	}
