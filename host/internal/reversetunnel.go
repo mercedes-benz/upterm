@@ -174,7 +174,7 @@ type PermissionDeniedError struct {
 }
 
 func (e *PermissionDeniedError) Error() string {
-	return fmt.Sprintf("%s: Permission denied (publickey) - DEBUG.", e.host)
+	return fmt.Sprintf("%s: Permission denied (publickey).", e.host)
 }
 
 func (e *PermissionDeniedError) Unwrap() error { return e.err }
