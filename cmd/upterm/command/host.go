@@ -75,6 +75,7 @@ func hostCmd() *cobra.Command {
 	cmd.PersistentFlags().StringSliceVar(&flagGitHubUsers, "github-user", nil, "this GitHub user public keys are permitted to connect.")
 	cmd.PersistentFlags().StringSliceVar(&flagGitLabUsers, "gitlab-user", nil, "this GitLab user public keys are permitted to connect.")
 	cmd.PersistentFlags().StringSliceVar(&flagSourceHutUsers, "srht-user", nil, "this SourceHut user public keys are permitted to connect.")
+	cmd.PersistentFlags().BoolVarP(&flagInteractive, "interactive", "", true, "directly launch the given command without accepting input from the user.")
 	cmd.PersistentFlags().BoolVarP(&flagReadOnly, "read-only", "r", false, "host a read-only session. Clients won't be able to interact.")
 	cmd.PersistentFlags().BoolVarP(&flagInteractive, "interactive", "", true, "directly launch the given command without accecpting input from the user.")
 	cmd.PersistentFlags().StringVarP(&flagGitHubAPI, "github-api", "", "https://api.github.com/v3", "GitHub API - requires a github-token to be set.")
@@ -246,6 +247,7 @@ func displaySessionCallback(session *api.GetSessionResponse) error {
 	}
 
 	if flagInteractive {
+
 		fmt.Printf("\nRun 'upterm session current' to display this screen again\n\n")
 
 		if err := keyboard.Open(); err != nil {
