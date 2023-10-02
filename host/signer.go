@@ -14,13 +14,12 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/google/go-github/v55/github"
 	"github.com/owenthereal/upterm/utils"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/term"
-
-	"github.com/google/go-github/v55/github"
 )
 
 const (
@@ -87,20 +86,26 @@ func getPublicKeysFromGitHub(logger *log.Logger, gitHub GitHub, usernames []stri
 			return nil, err
 		}
 
-		logger.Info(fmt.Sprintf("Found %d keys for %s", len(keys), username))
-		for _, key := range keys {
-			logger.Info(fmt.Sprintf("User %s - key %s", username, key.GetKey()))
-			pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(key.GetKey()))
-			if err != nil {
-				return nil, err
+		switch len(keys) {
+		case 0:
+			logger.Warn(fmt.Sprintf("No keys found for %s", username))
+		default:
+			logger.Info(fmt.Sprintf("Found %d keys for %s", len(keys), username))
+			for _, key := range keys {
+				logger.Info(fmt.Sprintf("User %s - key %s", username, key.GetKey()))
+				pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(key.GetKey()))
+				if err != nil {
+					return nil, err
+				}
+				authorizedKeys = append(authorizedKeys, pubKey)
 			}
-			authorizedKeys = append(authorizedKeys, pubKey)
+
 		}
 	}
 	return authorizedKeys, nil
 }
 
-func getPublicKeys(urlFmt string, usernames []string) ([]ssh.PublicKey, error) {
+func getPublicKeys(logger *log.Logger, urlFmt string, usernames []string) ([]ssh.PublicKey, error) {
 	var authorizedKeys []ssh.PublicKey
 	seen := make(map[string]bool)
 	for _, username := range usernames {
@@ -114,26 +119,36 @@ func getPublicKeys(urlFmt string, usernames []string) ([]ssh.PublicKey, error) {
 			if err != nil {
 				return nil, fmt.Errorf("[%s]: %s", username, err)
 			}
-			authorizedKeys = append(authorizedKeys, userKeys...)
+			switch len(userKeys) {
+			case 0:
+				logger.Warn(fmt.Sprintf("No keys found for %s", username))
+			default:
+				logger.Info(fmt.Sprintf("Found %d keys for %s", len(userKeys), username))
+				logger.Info(fmt.Sprintf("User %s - keys: %s", username, userKeys))
+				authorizedKeys = append(authorizedKeys, userKeys...)
+			}
 		}
 	}
 	return authorizedKeys, nil
 }
 
 func GitHubUserKeys(logger *log.Logger, gitHub GitHub, usernames []string) ([]ssh.PublicKey, error) {
+	logger.Info("Fetching GitHub user keys")
 	if gitHub.API != nil {
 		return getPublicKeysFromGitHub(logger, gitHub, usernames)
 	} else {
-		return getPublicKeys(gitHubKeysUrlFmt, usernames)
+		return getPublicKeys(logger, gitHubKeysUrlFmt, usernames)
 	}
 }
 
-func GitLabUserKeys(usernames []string) ([]ssh.PublicKey, error) {
-	return getPublicKeys(gitLabKeysUrlFmt, usernames)
+func GitLabUserKeys(logger *log.Logger, usernames []string) ([]ssh.PublicKey, error) {
+	logger.Info("Fetching GitLab user keys")
+	return getPublicKeys(logger, gitLabKeysUrlFmt, usernames)
 }
 
-func SourceHutUserKeys(usernames []string) ([]ssh.PublicKey, error) {
-	return getPublicKeys(sourceHutKeysUrlFmt, usernames)
+func SourceHutUserKeys(logger *log.Logger, usernames []string) ([]ssh.PublicKey, error) {
+	logger.Info("Fetching SourceHut user keys")
+	return getPublicKeys(logger, sourceHutKeysUrlFmt, usernames)
 }
 
 // Signers return signers based on the folllowing conditions:
